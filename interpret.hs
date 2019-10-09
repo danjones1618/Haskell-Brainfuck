@@ -1,12 +1,17 @@
 import System.Environment
 import System.IO
+import Data.Char
 -- BrainFuck interpreter By Daniel Jones
 data Expr = Output | Input | Left | Right | Inc | Dec | Loop Code | Skip deriving Show
 type Code = [Expr]
-data State = State [Int] Int [Int] deriving Show
+data State = State [Int] Int [Int] (IO ())
+
+instance Show State where
+    -- show :: State -> String
+    show (State ls m rs _) = (show ls) ++ (show m) ++ (show rs)
 
 startState :: State
-startState = State [] 0 []
+startState = State [] 0 [] (return ())
 
 convert :: String -> Code
 convert [] = []
@@ -37,14 +42,14 @@ convert (x:xs) = (f x) : (convert xs)
     f  _  = Skip
 
 execute :: Expr -> State -> State
-execute Output s = s
-execute Input s = s
-execute Main.Right (State ls m []) = State (ls ++ [m]) 0 []
-execute Main.Right (State ls m (r:rs)) = State (ls ++ [m]) r rs
-execute Main.Left (State [] m rs) = State [] m rs
-execute Main.Left (State (l:ls) m rs) = State ls l ([m] ++ rs)
-execute Inc (State ls m rs) = State ls (m + 1) rs
-execute Dec (State ls m rs) = State ls (m - 1) rs
+execute Output (State l m r o) = State l m r (print (chr m))
+execute Input (State l m r _) = State l m r (return ())
+execute Main.Right (State ls m [] _) = State (ls ++ [m]) 0 [] (return ())
+execute Main.Right (State ls m (r:rs) _) = State (ls ++ [m]) r rs (return ())
+execute Main.Left (State [] m rs _) = State [] m rs (return ())
+execute Main.Left (State (l:ls) m rs _) = State ls l ([m] ++ rs) (return ())
+execute Inc (State ls m rs _) = State ls (m + 1) rs (return ())
+execute Dec (State ls m rs _) = State ls (m - 1) rs (return ())
 execute (Loop c) s = doLoop c s
 execute Skip s = s
 
@@ -52,7 +57,7 @@ executeCode :: Code -> State -> State
 executeCode cs s = foldr execute s cs
 
 doLoop :: Code -> State -> State
-doLoop c s@(State _ 0 _) = s
+doLoop c s@(State _ 0 _ _) = s
 doLoop cs s = doLoop cs (executeCode cs s)
 
 main :: IO ()
@@ -63,7 +68,9 @@ main = do
     else do
         src <- readFile (head x)
         let c = convert src
-        print c
-        let ans = executeCode c startState
-        print ans
+        --print c
+        let (State _ _ _ a) = executeCode c startState
+        a
+        --print ans
+        -- return ()
         -- print (executeCode (convert src) startState)
