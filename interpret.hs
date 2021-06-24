@@ -43,7 +43,7 @@ convert (x:xs) = (f x) : (convert xs)
 
 execute :: Expr -> State -> State
 execute Output (State l m r o) = State l m r (o >> putChar (chr m))
-execute Input (State l m r o) = State l m r o
+execute Input (State l m r o) = State l (ord <-getChar) r o
 execute Main.Right (State ls m [] o) = State (m : ls) 0 [] o
 execute Main.Right (State ls m (r:rs) o) = State (m : ls) r rs o
 execute Main.Left s@(State [] m rs o) = s
